@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Chat App - Join Chat</title>
+    <link rel="icon" href="./img/favicon.png">
+    <link rel="stylesheet" href="./css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script
+        async
+        crossorigin="anonymous"
+        data-clerk-publishable-key="pk_test_Y2xvc2UtbWFncGllLTEwLmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://close-magpie-10.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript"
+    ></script>
+</head>
+
+<body>
+    <div class="centered-form">
+        <div class="centered-form__box">
+            <div class="logo-container">
+                <i class="fas fa-comments logo-icon"></i>
+                <h1>Chat App</h1>
+                <p class="subtitle">Real-time chat experience</p>
+            </div>
+            
+            <form id="join-form">
+                <div class="input-group">
+                    <label for="username">
+                        <i class="fas fa-user"></i>
+                        Username
+                    </label>
+                    <input type="text" name="username" id="username" required 
+                           placeholder="Enter your username" autocomplete="off">
+                </div>
+                
+                <div class="input-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i>
+                        Password
+                    </label>
+                    <input type="password" name="password" id="password" required
+                           placeholder="Enter your password" autocomplete="current-password">
+                </div>
+
+                <div class="input-group">
+                    <label for="room">
+                        <i class="fas fa-door-open"></i>
+                        Room Name
+                    </label>
+                    <input type="text" name="room" id="room" required 
+                           placeholder="Enter room name to join" autocomplete="off">
+                </div>
+
+                <div class="input-group" id="auth-error-group" style="display:none; margin-bottom: 0.5rem;">
+                    <p id="auth-error" style="color: var(--error-color); font-size: 0.875rem; margin: 0;"></p>
+                </div>
+
+                <button type="submit" id="join-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Join Chat
+                </button>
+            </form>
+            
+            
+        </div>
+    </div>
+
+    <script>
+        let clerkReady = window.Clerk ? window.Clerk.load() : null;
+        window.addEventListener('load', () => {
+            if (!clerkReady) clerkReady = window.Clerk.load();
+        });
+
+        function resetButton(button) {
+            button.innerHTML = '<i class="fas fa-sign-in-alt"></i> Join Chat';
+            button.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+            button.disabled = false;
+        }
+
+        function showAuthError(message) {
+            const group = document.getElementById('auth-error-group');
+            const errEl = document.getElementById('auth-error');
+            errEl.textContent = message;
+            group.style.display = 'block';
+        }
+
+        function hideAuthError() {
+            document.getElementById('auth-error-group').style.display = 'none';
+        }
+
+        // Form validation, Clerk sign-in, and animations
+        document.getElementById('join-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideAuthError();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const room = document.getElementById('room').value.trim();
+            const button = document.getElementById('join-btn');
+
+            if (!username || !password || !room) {
+                button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Please fill all fields';
+                button.style.background = 'linear-gradient(135deg, #f56565, #e53e3e)';
+                setTimeout(() => resetButton(button), 2000);
+                return;
+            }
+
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining...';
+            button.disabled = true;
+
+            try {
+                await clerkReady;
+
+                const result = await window.Clerk.client.signIn.create({
+                    identifier: username,
+                    password: password
+                });
+
+                if (result.status === 'complete') {
+                    await window.Clerk.setActive({ session: result.createdSessionId });
+                    window.location.href = `./chat.html?username=${encodeURIComponent(username)}&room=${encodeURIComponent(room)}`;
+                } else {
+                    showAuthError(`Additional step required: ${result.status}`);
+                    resetButton(button);
+                }
+            } catch (err) {
+                const msg = err?.errors?.[0]?.longMessage || err?.message || 'Sign in failed. Check your username and password.';
+                showAuthError(msg);
+                resetButton(button);
+            }
+        });
+        
+        // Input focus animations
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                if (!this.value) {
+                    this.parentElement.classList.remove('focused');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
